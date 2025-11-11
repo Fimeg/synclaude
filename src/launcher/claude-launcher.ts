@@ -1,11 +1,11 @@
 import { spawn, ChildProcess } from 'child_process';
-import { AppConfig } from '../config';
 
 export interface LaunchOptions {
   model: string;
   claudePath?: string;
   additionalArgs?: string[];
   env?: Record<string, string>;
+  continue?: boolean;
 }
 
 export interface LaunchResult {
@@ -32,6 +32,7 @@ export class ClaudeLauncher {
 
       // Prepare command arguments
       const args = [
+        ...(options.continue ? ['-c'] : []),
         ...(options.additionalArgs || []),
       ];
 

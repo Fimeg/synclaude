@@ -18,6 +18,7 @@ export function createProgram(): Command {
 
   program
     .option('-m, --model <model>', 'Use specific model (skip selection)')
+    .option('-c, --continue', 'Continue existing session with model swapping capability')
     .option('-v, --verbose', 'Enable verbose logging')
     .option('-q, --quiet', 'Suppress non-error output');
 

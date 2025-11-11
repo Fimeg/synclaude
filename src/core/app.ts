@@ -10,6 +10,7 @@ import { setupLogging, log } from '../utils/logger';
 export interface AppOptions {
   verbose?: boolean;
   quiet?: boolean;
+  continue?: boolean;
 }
 
 
@@ -57,6 +58,12 @@ export class SyntheticClaudeApp {
     // Handle first-time setup
     if (this.configManager.isFirstRun()) {
       await this.setup();
+      return;
+    }
+
+    // Handle continue flag
+    if (options.continue) {
+      await this.continueSession(options);
       return;
     }
 
@@ -340,10 +347,12 @@ export class SyntheticClaudeApp {
   }
 
   private async launchClaudeCode(model: string, options: LaunchOptions): Promise<void> {
-    this.ui.highlightInfo(`Launching with ${model}. Use "synclaude model" to change model.`, [model, 'synclaude model']);
+    const action = options.continue ? 'Resuming' : 'Launching with';
+    this.ui.highlightInfo(`${action} ${model}...`, [model]);
 
     const result = await this.launcher.launchClaudeCode({
       model,
+      continue: options.continue,
       additionalArgs: options.additionalArgs,
       env: {
         ANTHROPIC_AUTH_TOKEN: this.configManager.getApiKey(),
@@ -351,8 +360,41 @@ export class SyntheticClaudeApp {
     });
 
     if (!result.success) {
-      this.ui.error(`Failed to launch Claude Code: ${result.error}`);
+      this.ui.error(`Failed to ${options.continue ? 'resume' : 'launch'} Claude Code: ${result.error}`);
     }
+  }
+
+  private async continueSession(options: AppOptions & LaunchOptions): Promise<void> {
+    // Get model to use
+    let targetModel = options.model;
+
+    if (!targetModel) {
+      // Ask if user wants to switch models for resume
+      const switchModel = await this.ui.confirm('Switch to a different model for resume?', false);
+      if (switchModel) {
+        const selectedModel = await this.selectModel();
+        if (selectedModel) {
+          targetModel = selectedModel;
+        } else {
+          this.ui.info('Continuing with current model');
+        }
+      }
+    } else {
+      this.ui.coloredInfo(`Resuming with model: ${targetModel}`);
+    }
+
+    // If no specific model selected, use the saved model
+    if (!targetModel) {
+      const selectedModel = await this.selectModel();
+      if (!selectedModel) {
+        this.ui.error('No model selected. Use "synclaude model" to select a model first.');
+        return;
+      }
+      targetModel = selectedModel;
+    }
+
+    // Launch Claude Code with continue flag and optional model switching
+    await this.launchClaudeCode(targetModel!, { ...options, continue: true });
   }
 
 }
