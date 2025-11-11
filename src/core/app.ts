@@ -372,9 +372,9 @@ export class SyntheticClaudeApp {
       // Ask if user wants to switch models for resume
       const switchModel = await this.ui.confirm('Switch to a different model for resume?', false);
       if (switchModel) {
-        const selectedModel = await this.selectModel();
-        if (selectedModel) {
-          targetModel = selectedModel;
+        const success = await this.interactiveModelSelection();
+        if (success) {
+          targetModel = this.configManager.getSavedModel();
         } else {
           this.ui.info('Continuing with current model');
         }
